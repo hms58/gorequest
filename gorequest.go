@@ -1031,6 +1031,12 @@ func changeMapToURLValues(data map[string]interface{}) url.Values {
 					newUrlValues.Add(k, string(element.(json.Number)))
 				}
 			}
+		case map[string]interface{}:
+			j, err := json.Marshal(val)
+			if err != nil {
+				continue
+			}
+			newUrlValues.Add(k, string(j))
 		default:
 			// TODO add ptr, arrays, ...
 		}
