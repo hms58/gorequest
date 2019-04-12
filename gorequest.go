@@ -91,6 +91,7 @@ type SuperAgent struct {
 	Retryable            superAgentRetryable
 	DoNotClearSuperAgent bool
 	isClone              bool
+	enableEncodeQuery    bool
 }
 
 var DisableTransportSwap = false
@@ -123,6 +124,7 @@ func New() *SuperAgent {
 		CurlCommand:       false,
 		logger:            log.New(os.Stderr, "[gorequest]", log.LstdFlags),
 		isClone:           false,
+		enableEncodeQuery: true,
 	}
 	// disable keep alives by default, see this issue https://github.com/parnurzeal/gorequest/issues/75
 	s.Transport.DisableKeepAlives = true
@@ -280,6 +282,7 @@ func (s *SuperAgent) ClearSuperAgent() {
 	s.TargetType = TypeJSON
 	s.Cookies = make([]*http.Cookie, 0)
 	s.Errors = nil
+	s.enableEncodeQuery = true
 }
 
 // Just a wrapper to initialize SuperAgent instance by method string
@@ -1385,14 +1388,15 @@ func (s *SuperAgent) MakeRequest() (*http.Request, error) {
 	}
 
 	// Add all querystring from Query func
-	q := req.URL.Query()
-	for k, v := range s.QueryData {
-		for _, vv := range v {
-			q.Add(k, vv)
+	if s.enableEncodeQuery {
+		q := req.URL.Query()
+		for k, v := range s.QueryData {
+			for _, vv := range v {
+				q.Add(k, vv)
+			}
 		}
+		req.URL.RawQuery = q.Encode()
 	}
-	req.URL.RawQuery = q.Encode()
-
 	// Add basic auth
 	if s.BasicAuth != struct{ Username, Password string }{} {
 		req.SetBasicAuth(s.BasicAuth.Username, s.BasicAuth.Password)
@@ -1418,4 +1422,9 @@ func (s *SuperAgent) AsCurlCommand() (string, error) {
 		return "", err
 	}
 	return cmd.String(), nil
+}
+
+func (s *SuperAgent) DisableEncodeQuery() *SuperAgent {
+	s.enableEncodeQuery = false
+	return s
 }
